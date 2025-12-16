@@ -32,36 +32,94 @@ services:
       retries: 10
       start_period: 30s
 
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   traefik:
     image: traefik:latest
     container_name: traefik
     restart: always
     command:
-      - "--api=true"
-      - "--api.insecure=true"
+      # 1. Включаем встроенный веб-интерфейс/API
+      # Нужно: позволяет просматривать конфигурацию и статистику
+      # Адрес: http://localhost:8080 (только локально, если раскомментировать порт ниже)
+#       - "--api=true"
+      # 2. Разрешить НЕбезопасный доступ к API (без аутентификации)
+      # ⚠️ ОПАСНО: оставлять только для локальной разработки
+      # Если раскомментировать, API будет доступен всем без пароля
+#     - "--api.insecure=true"
+      # 3. Включить провайдер Docker для автоматического обнаружения контейнеров
+      # Нужно: Traefik автоматически находит контейнеры с метками
       - "--providers.docker=true"
+      # 4. Игнорировать контейнеры без явного разрешения
+      # Нужно: безопасность - только контейнеры с traefik.enable=true будут обрабатываться
       - "--providers.docker.exposedbydefault=false"
+      # 5. В какой сети Docker искать контейнеры
+      # Нужно: Traefik будет смотреть только в указанной сети
+      # Проблема: если контейнер в другой сети, Traefik его не увидит
+      # Решение: можно указать несколько сетей через запятую или убрать параметр
+      # - "--providers.docker.network=traefik_public"
+      # 6. Создаем точку входа для HTTP (порт 80)
+      # Нужно: принимать HTTP запросы на порту 80
       - "--entrypoints.web.address=:80"
+      # 7. Настраиваем редирект с HTTP на HTTPS
+      # Нужно: все запросы на порт 80 автоматически перенаправляются на порт 443
+      # Принцип: пользователь вводит http://domain → автоматически → https://domain
       - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      # 8. Указываем схему редиректа (HTTP → HTTPS)
+      # Нужно: меняем протокол с http на https при редиректе
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # 9. Делаем редирект постоянным (HTTP 301)
+      # Нужно: браузеры запоминают редирект и сразу идут на HTTPS
+      # Код ответа: 301 Moved Permanently
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      # 10. Создаем точку входа для HTTPS (порт 443)
+      # Нужно: принимать HTTPS запросы на порту 443
       - "--entrypoints.websecure.address=:443"
+      # 11. Настраиваем ACME резолвер для получения SSL сертификатов
+      # Нужно: автоматическое получение сертификатов от Let's Encrypt
+      # Тип челленджа: TLS-ALPN-01 (работает через порт 443)
       - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
+      # 12. Email для уведомлений Let's Encrypt
+      # Нужно: Let's Encrypt присылает уведомления об истечении сертификатов
+      # Формат: берется из переменной окружения SSL_EMAIL или дефолтное значение
       - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}"
+      # 13. Где хранить ACME данные и сертификаты
+      # Нужно: файл для хранения учетных данных и полученных сертификатов
+      # Расположение: внутри контейнера, примонтировано через volume
       - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
+      # 14. Уровень детализации логов
+      # DEBUG: максимальная детализация (хорошо для отладки)
+      # INFO: нормальный уровень (рекомендуется для production)
+      # WARN/ERROR: только предупреждения и ошибки
+#      - "--log.level=INFO"
+      # 15. Включить логи доступа (access logs)
+      # Нужно: логировать все HTTP запросы
+      # Плюсы: видеть кто, когда и что запрашивал
+      # Минусы: увеличивает объем логов, может содержать sensitive данные
+#      - "--accesslog=true"
     ports:
       - "80:80"
       - "443:443"
+#      - "127.0.0.1:8080:8080" 
     volumes:
       - traefik_data:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - traefik_public
-    healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      - internal_network
 
   n8n:
     image: n8nio/n8n:latest
@@ -72,8 +130,8 @@ services:
         condition: service_healthy
       ollama:
         condition: service_started
-      traefik:
-        condition: service_healthy  
+      redis:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Samara}
@@ -102,40 +160,92 @@ services:
       # Производительность
       N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
       N8N_RUNNERS_ENABLED: "true"
+      N8N_BULL_MQ_REDIS_HOST: redis
+      N8N_BULL_MQ_REDIS_PORT: 6379
       EXTERNAL_FRONTEND_HOOKS_URLS: "https://${DOMAIN}"
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
-      - internal_network
       - traefik_public
+      - internal_network
     labels:
+      # Базовые
+      # 1. Включаем Traefik для этого контейнера
+      # Нужно: без этого Traefik игнорирует контейнер, даже если он слушает порты
       - "traefik.enable=true"
+
+      # Маршрутизация
+      # 2. Правило маршрутизации: какой домен ведет на этот контейнер
+      # Нужно: говорит Traefik "запросы на ${DOMAIN} идут в этот контейнер"
       - "traefik.http.routers.n8n.rule=Host(`${DOMAIN}`)"
+      # 3. Через какую точку входа (entrypoint) принимать запросы
+      # Нужно: принимаем только HTTPS запросы (порт 443)
+      # Примечание: HTTP запросы (порт 80, web) УЖЕ редиректятся на HTTPS 
+      # благодаря глобальной настройке в command (entrypoints.web.http.redirections)
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      # 4. Включаем SSL/TLS для этого роутера
+      # Нужно: все соединения к этому роутеру должны использовать HTTPS
+      # Работает с: tls.certresolver для получения сертификатов
       - "traefik.http.routers.n8n.tls=true"
-      - "traefik.http.routers.n8n.entrypoints=web,websecure"
+      # 5. Какой резолвер сертификат использовать
+      # Нужно: используем Let's Encrypt через TLS Challenge (настроено в command как mytlschallenge)
+      # Автоматически: получает, обновляет и применяет SSL сертификаты
       - "traefik.http.routers.n8n.tls.certresolver=mytlschallenge"
-      - "traefik.http.middlewares.n8n.headers.SSLRedirect=true"
-      - "traefik.http.middlewares.n8n.headers.STSSeconds=315360000"
-      - "traefik.http.middlewares.n8n.headers.browserXSSFilter=true"
-      - "traefik.http.middlewares.n8n.headers.contentTypeNosniff=true"
-      - "traefik.http.middlewares.n8n.headers.forceSTSHeader=true"
-      - "traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN}"
-      - "traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true"
-      - "traefik.http.middlewares.n8n.headers.STSPreload=true"
-      - "traefik.http.routers.n8n.middlewares=n8n@docker"
+
+      # Security headers - защитные заголовки
+      # 6. HSTS (HTTP Strict Transport Security)
+      # Заставляет браузеры использовать ТОЛЬКО HTTPS для этого домена
+      # STSSeconds=31536000 = 1 год (браузер запоминает на 1 год)
+      - "traefik.http.middlewares.n8n-security.headers.STSSeconds=31536000"
+      # 7. Включаем HSTS для всех поддоменов
+      - "traefik.http.middlewares.n8n-security.headers.STSIncludeSubdomains=true"
+      # 8. X-XSS-Protection (защита от межсайтового скриптинга)
+      # Включает встроенную защиту XSS в браузерах
+      # Браузер блокирует подозрительный JavaScript
+      - "traefik.http.middlewares.n8n-security.headers.browserXSSFilter=true"
+      # 9. X-Content-Type-Options (защита от MIME-sniffing)
+      # Запрещает браузеру "угадывать" тип контента
+      # Предотвращает исполнение скриптов из файлов, которые должны быть картинками/текстом
+      - "traefik.http.middlewares.n8n-security.headers.contentTypeNosniff=true"
+      # 10. HSTS Preload (ОПАСНО - см. объяснение выше)
+      # Добавляет домен в жесткий список "только HTTPS" в браузерах
+      # ⚠️ Используйте ТОЛЬКО если уверены в своих SSL настройках!
+      # - "traefik.http.middlewares.n8n.headers.STSPreload=true"
+      # 11. Дополнительные security headers (рекомендуемые)
+      # Защита от кликджекинга (iframe)
+      - "traefik.http.middlewares.n8n-security.headers.customFrameOptionsValue=true"
+
+      # Применение middleware
+      # 12. Привязываем security headers к роутеру
+      # Нужно: чтобы заголовки выше применялись к трафику n8n
+      # Синтаксис: имя-middleware@провайдер (docker = провайдер меток Docker)
+      - "traefik.http.routers.n8n.middlewares=n8n-security@docker"
+      # Нужно: чтобы заголовки выше действительно работали
+
+      # Load balancer - настройка подключения к контейнеру
+      # 13. На какой порт внутри контейнера отправлять трафик
+      # Нужно: n8n слушает на порту 5678 внутри контейнера
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+      # 14. По какому протоколу Traefik общается с контейнером
+      # Нужно: HTTP (внутри Docker сети это безопасно)
+      # Почему HTTP, а не HTTPS:
+      # 1. Traefik ↔ Пользователь: HTTPS (шифрование)
+      # 2. Traefik ↔ N8n контейнер: HTTP (в одной сети, нет угроз перехвата)
+      # Преимущество: меньше нагрузки на CPU (нет двойного шифрования)
+      - "traefik.http.services.n8n.loadbalancer.server.scheme=http"
 
 networks:
   internal_network:
     # ПЕРВЫЙ ЗАПУСК: оставить как есть (интернет для скачивания модели)
     # ПОСЛЕ скачивания модели: раскомментировать строку ниже:
-    # Отключаем интернет для безопасности
-    # internal: true
+    # Это отключит интернет для безопасности
+    internal: true
   traefik_public:
     # Публичная сеть с доступом в интернет
 
 volumes:
   postgres_data:
   ollama_data:
-  n8n_data:
+  redis_data:
   traefik_data:
+  n8n_data:
