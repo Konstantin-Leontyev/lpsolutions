@@ -15,19 +15,14 @@ services:
       - internal_network
       - traefik_public
 
-  # HTTP-прокси поверх SOCKS5 (n8n не принимает socks5:// в HTTP_PROXY).
+  # HTTP-прокси поверх SOCKS5: в том же контейнере что и amnezia-client (SOCKS5 слушает только 127.0.0.1).
   privoxy:
     image: vimagick/privoxy:latest
     container_name: privoxy
     restart: unless-stopped
-    depends_on:
-      amnezia-client:
-        condition: service_started
+    network_mode: "service:amnezia-client"
     volumes:
       - ./privoxy.conf:/etc/privoxy/config:ro
-    networks:
-      - internal_network
-      - traefik_public
 
   postgres:
     image: postgres:latest
@@ -164,8 +159,6 @@ services:
         condition: service_healthy
       amnezia-client:
         condition: service_started
-      privoxy:
-        condition: service_started
     environment:
       NODE_ENV: production
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Samara}
@@ -199,9 +192,9 @@ services:
       EXTERNAL_FRONTEND_HOOKS_URLS: "https://${DOMAIN}"
 
       # Внешний выход в интернет через VPN (Privoxy → SOCKS5 amnezia-client; n8n не поддерживает socks5:// в undici)
-      HTTP_PROXY: http://privoxy:8118
-      HTTPS_PROXY: http://privoxy:8118
-      NO_PROXY: localhost,127.0.0.1,postgres,redis,ollama,amnezia-client,privoxy
+      HTTP_PROXY: http://amnezia-client:8118
+      HTTPS_PROXY: http://amnezia-client:8118
+      NO_PROXY: localhost,127.0.0.1,postgres,redis,ollama,amnezia-client
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
