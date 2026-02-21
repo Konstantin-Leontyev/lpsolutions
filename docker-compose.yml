@@ -1,16 +1,22 @@
-# Docker Compose с выходом в интернет через VPN (WireGuard/SOCKS5)
-# Конфиг: файл amnezia_for_awg.conf в корне проекта (скопируйте его на сервер после клонирования, см. README).
+# Docker Compose с выходом в интернет через VPN (Amnezia Bridge)
+# Конфиг: положите amnezia_for_awg.conf в каталог vpn-config/ (см. README).
 
 services:
-  # VPN-клиент: WireGuard → SOCKS5 на порту 1080. Трафик n8n в интернет идёт через него.
+  # VPN-клиент (Amnezia Bridge): AmneziaWG + SOCKS5 (1080) + HTTP-прокси (8080). Трафик n8n идёт через HTTP-прокси.
   amnezia-client:
-    image: kizzx2/wireguard-socks-proxy:latest
+    image: ghcr.io/mainfrezzer/amnezia-bridge:latest
     container_name: amnezia-client
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
     volumes:
-      - ./amnezia_for_awg.conf:/etc/wireguard/wg0.conf:ro
+      - ./vpn-config:/etc/amnezia/amneziawg/
+    environment:
+      - LAN_NETWORK=172.16.0.0/12,192.168.0.0/16
+      - HTTPPORT=8080
+      - ENABLE_RANDOM=0
     networks:
       - internal_network
       - traefik_public
@@ -182,9 +188,9 @@ services:
       N8N_BULL_MQ_REDIS_PORT: 6379
       EXTERNAL_FRONTEND_HOOKS_URLS: "https://${DOMAIN}"
 
-      # Внешний выход в интернет через VPN (SOCKS5)
-      HTTP_PROXY: socks5://amnezia-client:1080
-      HTTPS_PROXY: socks5://amnezia-client:1080
+      # Внешний выход в интернет через VPN (HTTP-прокси Privoxy в amnezia-bridge; n8n не поддерживает socks5:// в undici)
+      HTTP_PROXY: http://amnezia-client:8080
+      HTTPS_PROXY: http://amnezia-client:8080
       NO_PROXY: localhost,127.0.0.1,postgres,redis,ollama,amnezia-client
     volumes:
       - n8n_data:/home/node/.n8n
