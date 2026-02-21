@@ -34,12 +34,10 @@
     ```
 
 6.  **Скопируйте VPN-конфиг на сервер (до первого запуска)**  
-    Текущий стек выводит трафик n8n в интернет через VPN (Amnezia Bridge). Конфиг должен лежать в каталоге `vpn-config/`. Без конфига контейнер `amnezia-client` не поднимется.
+    Стек выводит трафик n8n в интернет через VPN. Файл `amnezia_for_awg.conf` — в корне проекта (без опций AmneziaWG: Jc, Jmin, Jmax, S1, S2, H1–H4; при необходимости удалите эти строки из конфига).
     ```bash
-    # С вашего компьютера на сервер (один раз):
-    scp amnezia_for_awg.conf <пользователь>@<сервер>:/opt/lpsolutions/vpn-config/
+    scp amnezia_for_awg.conf <пользователь>@<сервер>:/opt/lpsolutions/
     ```
-    Если файл уже в корне проекта на сервере: `mkdir -p vpn-config && cp amnezia_for_awg.conf vpn-config/`
 
 7.  **Запустите стек**
     ```bash
@@ -56,19 +54,15 @@
 
 ## 🔄 Перезапуск после обновления (git pull)
 
-Конфиг уже скопирован на сервер. Чтобы применить новый compose (например, переход на Amnezia Bridge):
-
 ```bash
 cd /opt/lpsolutions
-# Положите конфиг в vpn-config/, если лежит в корне:
-mkdir -p vpn-config && cp amnezia_for_awg.conf vpn-config/ 2>/dev/null || true
 git pull
 docker compose down
 docker compose up -d
 ```
 
 Проверка VPN: `docker compose logs amnezia-client --tail 20` и  
-`docker compose exec n8n sh -c 'curl -s --proxy http://amnezia-client:8080 https://ifconfig.me'` (должен вернуть IP выхода VPN).
+`docker compose exec n8n sh -c 'curl -s --proxy http://privoxy:8118 https://ifconfig.me'` (должен вернуть IP выхода VPN).
 
 ## 🔧 Использование
 

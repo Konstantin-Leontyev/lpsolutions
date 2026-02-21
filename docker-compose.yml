@@ -1,22 +1,30 @@
-# Docker Compose с выходом в интернет через VPN (Amnezia Bridge)
-# Конфиг: положите amnezia_for_awg.conf в каталог vpn-config/ (см. README).
+# Docker Compose с выходом в интернет через VPN (WireGuard → SOCKS5 → Privoxy → n8n)
+# Конфиг: файл amnezia_for_awg.conf в корне проекта (без AmneziaWG-опций Jc, Jmin и т.д. — см. README).
 
 services:
-  # VPN-клиент (Amnezia Bridge): AmneziaWG + SOCKS5 (1080) + HTTP-прокси (8080). Трафик n8n идёт через HTTP-прокси.
+  # VPN-клиент: WireGuard → SOCKS5 на 1080.
   amnezia-client:
-    image: ghcr.io/mainfrezzer/amnezia-bridge:latest
+    image: kizzx2/wireguard-socks-proxy:latest
     container_name: amnezia-client
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
     volumes:
-      - ./vpn-config:/etc/amnezia/amneziawg/
-    environment:
-      - LAN_NETWORK=172.16.0.0/12,192.168.0.0/16
-      - HTTPPORT=8080
-      - ENABLE_RANDOM=0
+      - ./amnezia_for_awg.conf:/etc/wireguard/wg0.conf:ro
+    networks:
+      - internal_network
+      - traefik_public
+
+  # HTTP-прокси поверх SOCKS5 (n8n не принимает socks5:// в HTTP_PROXY).
+  privoxy:
+    image: vimagick/privoxy:latest
+    container_name: privoxy
+    restart: unless-stopped
+    depends_on:
+      amnezia-client:
+        condition: service_started
+    volumes:
+      - ./privoxy.conf:/etc/privoxy/config:ro
     networks:
       - internal_network
       - traefik_public
@@ -156,6 +164,8 @@ services:
         condition: service_healthy
       amnezia-client:
         condition: service_started
+      privoxy:
+        condition: service_started
     environment:
       NODE_ENV: production
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Samara}
@@ -188,10 +198,10 @@ services:
       N8N_BULL_MQ_REDIS_PORT: 6379
       EXTERNAL_FRONTEND_HOOKS_URLS: "https://${DOMAIN}"
 
-      # Внешний выход в интернет через VPN (HTTP-прокси Privoxy в amnezia-bridge; n8n не поддерживает socks5:// в undici)
-      HTTP_PROXY: http://amnezia-client:8080
-      HTTPS_PROXY: http://amnezia-client:8080
-      NO_PROXY: localhost,127.0.0.1,postgres,redis,ollama,amnezia-client
+      # Внешний выход в интернет через VPN (Privoxy → SOCKS5 amnezia-client; n8n не поддерживает socks5:// в undici)
+      HTTP_PROXY: http://privoxy:8118
+      HTTPS_PROXY: http://privoxy:8118
+      NO_PROXY: localhost,127.0.0.1,postgres,redis,ollama,amnezia-client,privoxy
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
