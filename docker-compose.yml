@@ -1,4 +1,20 @@
+# Docker Compose с выходом в интернет через VPN (WireGuard/SOCKS5)
+# Конфиг: файл amnezia_for_awg.conf в корне проекта (скопируйте его на сервер после клонирования, см. README).
+
 services:
+  # VPN-клиент: WireGuard → SOCKS5 на порту 1080. Трафик n8n в интернет идёт через него.
+  amnezia-client:
+    image: kizzx2/wireguard-socks-proxy:latest
+    container_name: amnezia-client
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./amnezia_for_awg.conf:/etc/wireguard/wg0.conf:ro
+    networks:
+      - internal_network
+      - traefik_public
+
   postgres:
     image: postgres:latest
     container_name: postgres
@@ -113,7 +129,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-#      - "127.0.0.1:8080:8080" 
+#      - "127.0.0.1:8080:8080"
     volumes:
       - traefik_data:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -132,6 +148,8 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
+      amnezia-client:
+        condition: service_started
     environment:
       NODE_ENV: production
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Samara}
@@ -163,6 +181,11 @@ services:
       N8N_BULL_MQ_REDIS_HOST: redis
       N8N_BULL_MQ_REDIS_PORT: 6379
       EXTERNAL_FRONTEND_HOOKS_URLS: "https://${DOMAIN}"
+
+      # Внешний выход в интернет через VPN (SOCKS5)
+      HTTP_PROXY: socks5://amnezia-client:1080
+      HTTPS_PROXY: socks5://amnezia-client:1080
+      NO_PROXY: localhost,127.0.0.1,postgres,redis,ollama,amnezia-client
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
@@ -180,7 +203,7 @@ services:
       - "traefik.http.routers.n8n.rule=Host(`${DOMAIN}`)"
       # 3. Через какую точку входа (entrypoint) принимать запросы
       # Нужно: принимаем только HTTPS запросы (порт 443)
-      # Примечание: HTTP запросы (порт 80, web) УЖЕ редиректятся на HTTPS 
+      # Примечание: HTTP запросы (порт 80, web) УЖЕ редиректятся на HTTPS
       # благодаря глобальной настройке в command (entrypoints.web.http.redirections)
       - "traefik.http.routers.n8n.entrypoints=websecure"
       # 4. Включаем SSL/TLS для этого роутера

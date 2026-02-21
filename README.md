@@ -38,6 +38,15 @@
     docker compose up -d
     ```
 
+    **Вариант с VPN (выход в интернет через Amnezia):** после клонирования и создания `.env` скопируйте файл `amnezia_for_awg.conf` на удалённый сервер в каталог проекта (файл в репозиторий не входит), затем запустите:
+    ```bash
+    # С вашего компьютера на сервер (один раз):
+    scp amnezia_for_awg.conf <пользователь>@<сервер>:/opt/lpsolutions/
+
+    # На сервере:
+    docker compose up -d
+    ```
+
 7. **Скачайте модель в контейнер Ollama:**
     ```bash
     docker compose exec ollama ollama pull <название_модели>

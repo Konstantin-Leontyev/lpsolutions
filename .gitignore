@@ -1,6 +1,10 @@
 # Файл с реальными паролями и ключами
 .env
 
+# Варианты compose (основной — docker-compose.yml с VPN)
+docker-compose-base.yml
+docker-compose-ollama-ui.yml
+
 # Данные Docker (тома) и служебные файлы
 **/.docker/
 **/.env.local
