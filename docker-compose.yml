@@ -167,6 +167,7 @@ services:
       # Кастомная нода ставится вручную в entrypoint в ~/.n8n/nodes
       N8N_LOG_LEVEL: info
     entrypoint: ["sh", "/entrypoint-n8n.sh"]
+    command: ["n8n", "start"]
     volumes:
       - n8n_data:/home/node/.n8n
       - ./custom-nodes:/home/node/.n8n/custom-nodes

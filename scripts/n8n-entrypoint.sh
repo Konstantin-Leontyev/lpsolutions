@@ -6,6 +6,7 @@ CUSTOM_PKG="/home/node/.n8n/custom-nodes/n8n-nodes-yandex-speechkit"
 MARKER="$NODES_DIR/node_modules/n8n-nodes-yandex-speechkit/package.json"
 
 echo "[entrypoint] Starting. CUSTOM_PKG exists: $(test -f "$CUSTOM_PKG/package.json" && echo yes || echo no). Marker exists: $(test -f "$MARKER" && echo yes || echo no)."
+[ -d /home/node/.n8n/custom-nodes ] && echo "[entrypoint] custom-nodes dir: $(ls /home/node/.n8n/custom-nodes)" || echo "[entrypoint] custom-nodes dir: MISSING"
 
 if [ -f "$CUSTOM_PKG/package.json" ] && [ ! -f "$MARKER" ]; then
   echo "[entrypoint] Installing community node from $CUSTOM_PKG (one-time)..."
@@ -20,5 +21,9 @@ else
   echo "[entrypoint] Skip install (already installed or no package)."
 fi
 
+# Если CMD не передан (образ n8n может не задавать CMD), запускаем n8n по умолчанию
+if [ $# -eq 0 ]; then
+  set -- n8n
+fi
 echo "[entrypoint] Executing: $*"
 exec "$@"
