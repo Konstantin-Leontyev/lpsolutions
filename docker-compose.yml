@@ -134,7 +134,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Samara}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Moscow}
 
       # База данных
       DB_TYPE: postgresdb
