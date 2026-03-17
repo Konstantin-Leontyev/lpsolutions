@@ -75,9 +75,9 @@ docker compose up -d
    - **Base URL**: `http://ollama:11434`
    - **Model**: <название_модели>
 
-### Кастомная нода Yandex SpeechKit
+### Кастомная нода Yandex GPT
 
-Сборка ноды лежит в репо: `custom-nodes/n8n-nodes-yandex-speechkit/` (package.json + dist). Том в docker-compose монтирует `./custom-nodes` в контейнер — отдельный скрипт на сервере не нужен.
+Сборка ноды лежит в репо: `custom-nodes/n8n-nodes-yandex-gpt/` (package.json + dist). Том в docker-compose монтирует `./custom-nodes` в контейнер — отдельный скрипт на сервере не нужен.
 
 **На сервере после git pull:**
 ```bash
@@ -86,17 +86,17 @@ git pull
 docker compose up -d n8n
 ```
 
-**Обновление ноды (локально):** пересобрать в репо n8n-nodes-yandex-speechkit, скопировать в lpsolutions, закоммитить и push:
+**Обновление ноды (локально):** пересобрать в репо n8n-nodes-yandex-gpt, скопировать в lpsolutions, закоммитить и push:
 ```bash
-# в n8n-nodes-yandex-speechkit
+# в n8n-nodes-yandex-gpt
 npm run build
 
 # в lpsolutions
 ./update-custom-node.sh
-# или с другим путём: ./update-custom-node.sh /path/to/n8n-nodes-yandex-speechkit
+# или с другим путём: ./update-custom-node.sh /path/to/n8n-nodes-yandex-gpt
 
 git add custom-nodes/
-git commit -m "chore: update Yandex SpeechKit node"
+git commit -m "chore: update Yandex GPT node"
 git push
 ```
 

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../zerocoder/PEn09"
+		},
+		{
+			"path": "../n8n-nodes-yandex-gpt"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {}
+}
