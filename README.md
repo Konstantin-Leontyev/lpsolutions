@@ -99,3 +99,18 @@ git add custom-nodes/
 git commit -m "chore: update Yandex SpeechKit node"
 git push
 ```
+
+### Отладка n8n (полные логи)
+
+Чтобы понять, почему контейнер перезапускается или нода не подхватывается:
+
+```bash
+# Все логи n8n с момента последнего старта (без ограничения строк)
+docker compose logs n8n 2>&1
+
+# Сохранить в файл и скачать
+docker compose logs n8n 2>&1 > n8n-full.log
+
+# Только строки entrypoint и ошибки
+docker compose logs n8n 2>&1 | grep -E '\[entrypoint\]|Error|error|ECONNREFUSED|Cannot find'
+```
