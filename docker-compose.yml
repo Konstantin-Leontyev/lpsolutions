@@ -164,13 +164,13 @@ services:
       N8N_BULL_MQ_REDIS_PORT: 6379
       EXTERNAL_FRONTEND_HOOKS_URLS: "https://${DOMAIN}"
 
-      # Кастомные ноды: пакет смонтирован в ~/.n8n/custom, путь задаём явно
-      N8N_CUSTOM_EXTENSIONS: /home/node/.n8n/custom
+      # Кастомные ноды: путь к папке с подпапками-пакетами (в каждой свой package.json)
+      N8N_CUSTOM_EXTENSIONS: /home/node/.n8n/custom-nodes
       N8N_LOG_LEVEL: debug
     volumes:
       - n8n_data:/home/node/.n8n
-      # Пакет монтируется в дефолтную папку custom (n8n подхватывает без N8N_CUSTOM_EXTENSIONS)
-      - ./custom-nodes/n8n-nodes-yandex-speechkit:/home/node/.n8n/custom
+      # Родительская папка: внутри должна быть подпапка n8n-nodes-yandex-speechkit с package.json и dist/
+      - ./custom-nodes:/home/node/.n8n/custom-nodes
     networks:
       - traefik_public
       - internal_network
