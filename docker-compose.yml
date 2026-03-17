@@ -165,7 +165,7 @@ services:
       EXTERNAL_FRONTEND_HOOKS_URLS: "https://${DOMAIN}"
 
       # Кастомные ноды (например n8n-nodes-yandex-speechkit)
-      N8N_CUSTOM_EXTENSIONS: /home/node/.n8n/custom-nodes
+      N8N_CUSTOM_EXTENSIONS: /home/node/.n8n/custom-nodes/n8n-nodes-yandex-speechkit
     volumes:
       - n8n_data:/home/node/.n8n
       - ./custom-nodes:/home/node/.n8n/custom-nodes
