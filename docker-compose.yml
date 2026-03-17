@@ -163,8 +163,12 @@ services:
       N8N_BULL_MQ_REDIS_HOST: redis
       N8N_BULL_MQ_REDIS_PORT: 6379
       EXTERNAL_FRONTEND_HOOKS_URLS: "https://${DOMAIN}"
+
+      # Кастомные ноды (например n8n-nodes-yandex-speechkit)
+      N8N_CUSTOM_EXTENSIONS: /home/node/.n8n/custom-nodes
     volumes:
       - n8n_data:/home/node/.n8n
+      - ./custom-nodes:/home/node/.n8n/custom-nodes
     networks:
       - traefik_public
       - internal_network

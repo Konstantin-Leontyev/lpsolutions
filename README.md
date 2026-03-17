@@ -74,3 +74,28 @@ docker compose up -d
 2. Настройте соединение:
    - **Base URL**: `http://ollama:11434`
    - **Model**: <название_модели>
+
+### Кастомная нода Yandex SpeechKit
+
+Сборка ноды лежит в репо: `custom-nodes/n8n-nodes-yandex-speechkit/` (package.json + dist). Том в docker-compose монтирует `./custom-nodes` в контейнер — отдельный скрипт на сервере не нужен.
+
+**На сервере после git pull:**
+```bash
+cd /opt/lpsolutions
+git pull
+docker compose up -d n8n
+```
+
+**Обновление ноды (локально):** пересобрать в репо n8n-nodes-yandex-speechkit, скопировать в lpsolutions, закоммитить и push:
+```bash
+# в n8n-nodes-yandex-speechkit
+npm run build
+
+# в lpsolutions
+./update-custom-node.sh
+# или с другим путём: ./update-custom-node.sh /path/to/n8n-nodes-yandex-speechkit
+
+git add custom-nodes/
+git commit -m "chore: update Yandex SpeechKit node"
+git push
+```
