@@ -164,13 +164,13 @@ services:
       N8N_BULL_MQ_REDIS_PORT: 6379
       EXTERNAL_FRONTEND_HOOKS_URLS: "https://${DOMAIN}"
 
-      # Кастомные ноды: путь к папке с подпапками-пакетами (в каждой свой package.json)
-      N8N_CUSTOM_EXTENSIONS: /home/node/.n8n/custom-nodes
-      N8N_LOG_LEVEL: debug
+      # Кастомная нода ставится вручную в entrypoint в ~/.n8n/nodes
+      N8N_LOG_LEVEL: info
+    entrypoint: ["sh", "/entrypoint-n8n.sh"]
     volumes:
       - n8n_data:/home/node/.n8n
-      # Родительская папка: внутри должна быть подпапка n8n-nodes-yandex-speechkit с package.json и dist/
       - ./custom-nodes:/home/node/.n8n/custom-nodes
+      - ./scripts/n8n-entrypoint.sh:/entrypoint-n8n.sh:ro
     networks:
       - traefik_public
       - internal_network
