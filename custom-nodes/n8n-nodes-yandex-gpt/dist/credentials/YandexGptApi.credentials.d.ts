@@ -1,5 +1,5 @@
 import type { ICredentialTestRequest, ICredentialType, Icon, INodeProperties } from 'n8n-workflow';
-export declare class YandexSpeechKitApi implements ICredentialType {
+export declare class YandexGptApi implements ICredentialType {
     name: string;
     displayName: string;
     documentationUrl: string;

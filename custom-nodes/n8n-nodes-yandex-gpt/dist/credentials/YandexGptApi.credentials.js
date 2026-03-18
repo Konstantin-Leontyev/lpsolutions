@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.YandexSpeechKitApi = void 0;
-class YandexSpeechKitApi {
+exports.YandexGptApi = void 0;
+class YandexGptApi {
     constructor() {
-        this.name = 'yandexSpeechKitApi';
-        this.displayName = 'YandexGPT';
+        this.name = 'yandexGptApi';
+        this.displayName = 'YandexGPT API';
         this.documentationUrl = 'https://yandex.cloud/docs/speechkit';
-        this.icon = 'file:yandexGpt.svg';
+        this.icon = { light: 'file:yandexGpt.svg', dark: 'file:yandexGpt.dark.svg' };
         this.properties = [
             {
                 displayName: 'Folder ID',
@@ -22,7 +22,7 @@ class YandexSpeechKitApi {
                 type: 'string',
                 typeOptions: { password: true },
                 default: '',
-                description: 'API key of the service account with SpeechKit access',
+                description: 'API key of the service account with access to Yandex Cloud APIs used by this node (e.g. SpeechKit)',
                 required: true,
             },
         ];
@@ -43,5 +43,5 @@ class YandexSpeechKitApi {
         };
     }
 }
-exports.YandexSpeechKitApi = YandexSpeechKitApi;
-//# sourceMappingURL=YandexSpeechKitApi.credentials.js.map
+exports.YandexGptApi = YandexGptApi;
+//# sourceMappingURL=YandexGptApi.credentials.js.map

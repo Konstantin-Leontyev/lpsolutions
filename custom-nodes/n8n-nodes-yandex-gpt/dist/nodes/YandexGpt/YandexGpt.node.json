@@ -1,5 +1,5 @@
 {
-    "node": "n8n-nodes-yandex-speechkit",
+    "node": "n8n-nodes-yandex-gpt",
     "nodeVersion": "1.0",
     "codexVersion": "1.0",
     "categories": ["AI", "Translate"],

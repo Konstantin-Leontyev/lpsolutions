@@ -31,10 +31,10 @@
         "n8nNodesApiVersion": 1,
         "strict": true,
         "credentials": [
-            "dist/credentials/YandexSpeechKitApi.credentials.js"
+            "dist/credentials/YandexGptApi.credentials.js"
         ],
         "nodes": [
-            "dist/nodes/YandexSpeechKit/YandexSpeechKit.node.js"
+            "dist/nodes/YandexGpt/YandexGpt.node.js"
         ]
     },
     "devDependencies": {

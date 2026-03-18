@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.YandexSpeechKit = void 0;
+exports.YandexGpt = void 0;
 const n8n_workflow_1 = require("n8n-workflow");
 const YANDEX_TTS_URL = 'https://tts.api.cloud.yandex.net:443/tts/v3/utteranceSynthesis';
 const STT_RECOGNIZE_ASYNC_URL = 'https://stt.api.cloud.yandex.net:443/stt/v3/recognizeFileAsync';
@@ -54,12 +54,12 @@ async function recognizeFileV3(apiKey, folderId, audioBuffer, containerType, lan
     });
     if (!initRes.ok) {
         const errText = await initRes.text();
-        throw new Error(`recognizeFileAsync failed (${initRes.status}): ${errText}`);
+        throw new n8n_workflow_1.ApplicationError(`recognizeFileAsync failed (${initRes.status}): ${errText}`);
     }
     const op = (await initRes.json());
     const operationId = op === null || op === void 0 ? void 0 : op.id;
     if (!operationId) {
-        throw new Error('No operation id in recognizeFileAsync response');
+        throw new n8n_workflow_1.ApplicationError('No operation id in recognizeFileAsync response');
     }
     const deadline = Date.now() + POLL_TIMEOUT_MS;
     while (Date.now() < deadline) {
@@ -67,17 +67,17 @@ async function recognizeFileV3(apiKey, folderId, audioBuffer, containerType, lan
             headers: { Authorization: `Api-Key ${apiKey}` },
         });
         if (!pollRes.ok) {
-            await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+            await (0, n8n_workflow_1.sleep)(POLL_INTERVAL_MS);
             continue;
         }
         const poll = (await pollRes.json());
         if ((_a = poll.error) === null || _a === void 0 ? void 0 : _a.message) {
-            throw new Error(`Recognition failed: ${poll.error.message}`);
+            throw new n8n_workflow_1.ApplicationError(`Recognition failed: ${poll.error.message}`);
         }
         if (poll.done) {
             break;
         }
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+        await (0, n8n_workflow_1.sleep)(POLL_INTERVAL_MS);
     }
     const getRes = await fetch(`${STT_GET_RECOGNITION_URL}?operation_id=${encodeURIComponent(operationId)}`, {
         headers: {
@@ -87,7 +87,7 @@ async function recognizeFileV3(apiKey, folderId, audioBuffer, containerType, lan
     });
     if (!getRes.ok) {
         const errText = await getRes.text();
-        throw new Error(`getRecognition failed (${getRes.status}): ${errText}`);
+        throw new n8n_workflow_1.ApplicationError(`getRecognition failed (${getRes.status}): ${errText}`);
     }
     const getData = (await getRes.json());
     const parts = [];
@@ -103,39 +103,62 @@ async function recognizeFileV3(apiKey, folderId, audioBuffer, containerType, lan
     }
     return parts.join(' ').trim() || '';
 }
-class YandexSpeechKit {
+class YandexGpt {
     constructor() {
         this.description = {
             displayName: 'YandexGPT',
-            name: 'yandexSpeechKit',
-            icon: { light: 'file:yandexGpt.svg', dark: 'file:yandexGpt.svg' },
+            name: 'yandexGpt',
+            icon: { light: 'file:yandexGpt.svg', dark: 'file:yandexGpt.dark.svg' },
             group: ['transform'],
             version: [1],
+            subtitle: '={{$parameter.operation === "transcribe" ? "Transcribe a recording" : "Generate audio"}}',
             description: 'Transcribe audio or generate speech via Yandex SpeechKit (YandexGPT). Uses API v3 for both STT and TTS. STT: WAV, OggOpus, MP3; no 1 MB/30 s limit.',
             defaults: {
                 name: 'YandexGPT',
             },
+            usableAsTool: true,
             inputs: [n8n_workflow_1.NodeConnectionTypes.Main],
             outputs: [n8n_workflow_1.NodeConnectionTypes.Main],
             credentials: [
                 {
-                    name: 'yandexSpeechKitApi',
+                    name: 'yandexGptApi',
                     required: true,
-                    testedBy: 'yandexSpeechKit',
                 },
             ],
             properties: [
                 {
-                    displayName: 'Operation',
+                    displayName: 'Resource',
                     name: 'resource',
                     type: 'options',
                     noDataExpression: true,
+                    options: [{ name: 'Audio', value: 'audio' }],
+                    default: 'audio',
+                },
+                {
+                    displayName: 'Operation',
+                    name: 'operation',
+                    type: 'options',
+                    noDataExpression: true,
+                    displayOptions: {
+                        show: {
+                            resource: ['audio'],
+                        },
+                    },
                     options: [
-                        { name: 'Transcribe a recording', value: 'stt' },
-                        { name: 'Generate audio', value: 'tts' },
+                        {
+                            name: 'Generate audio',
+                            value: 'generate',
+                            action: 'Generate audio',
+                            description: 'Text-to-speech (TTS)',
+                        },
+                        {
+                            name: 'Transcribe a recording',
+                            value: 'transcribe',
+                            action: 'Transcribe a recording',
+                            description: 'Speech-to-text (STT)',
+                        },
                     ],
-                    default: 'stt',
-                    description: 'What to do with the input',
+                    default: 'transcribe',
                 },
                 {
                     displayName: 'Binary Property',
@@ -143,7 +166,12 @@ class YandexSpeechKit {
                     type: 'string',
                     default: 'data',
                     description: 'Name of the binary property with audio. SpeechKit API v3. Formats: WAV, OggOpus, MP3. No 1 MB/30 s limit.',
-                    displayOptions: { show: { resource: ['stt'] } },
+                    displayOptions: {
+                        show: {
+                            resource: ['audio'],
+                            operation: ['transcribe'],
+                        },
+                    },
                 },
                 {
                     displayName: 'Language',
@@ -151,7 +179,12 @@ class YandexSpeechKit {
                     type: 'string',
                     default: 'ru-RU',
                     description: 'Recognition language code',
-                    displayOptions: { show: { resource: ['stt'] } },
+                    displayOptions: {
+                        show: {
+                            resource: ['audio'],
+                            operation: ['transcribe'],
+                        },
+                    },
                 },
                 {
                     displayName: 'Text',
@@ -160,7 +193,12 @@ class YandexSpeechKit {
                     default: '',
                     description: 'Text to synthesize to speech',
                     required: true,
-                    displayOptions: { show: { resource: ['tts'] } },
+                    displayOptions: {
+                        show: {
+                            resource: ['audio'],
+                            operation: ['generate'],
+                        },
+                    },
                 },
                 {
                     displayName: 'Voice',
@@ -168,7 +206,12 @@ class YandexSpeechKit {
                     type: 'string',
                     default: 'marina',
                     description: 'SpeechKit voice (e.g. marina, alena)',
-                    displayOptions: { show: { resource: ['tts'] } },
+                    displayOptions: {
+                        show: {
+                            resource: ['audio'],
+                            operation: ['generate'],
+                        },
+                    },
                 },
                 {
                     displayName: 'Role',
@@ -176,7 +219,12 @@ class YandexSpeechKit {
                     type: 'string',
                     default: 'friendly',
                     description: 'Voice role/character (e.g. friendly)',
-                    displayOptions: { show: { resource: ['tts'] } },
+                    displayOptions: {
+                        show: {
+                            resource: ['audio'],
+                            operation: ['generate'],
+                        },
+                    },
                 },
             ],
         };
@@ -184,9 +232,9 @@ class YandexSpeechKit {
     async execute() {
         var _a, _b, _c, _d;
         const items = this.getInputData();
-        const credentials = await this.getCredentials('yandexSpeechKitApi');
-        const resource = this.getNodeParameter('resource', 0);
-        if (resource === 'stt') {
+        const credentials = await this.getCredentials('yandexGptApi');
+        const operation = this.getNodeParameter('operation', 0);
+        if (operation === 'transcribe') {
             const binaryPropertyName = this.getNodeParameter('binaryPropertyName', 0, 'data');
             const lang = this.getNodeParameter('lang', 0, 'ru-RU');
             const results = [];
@@ -297,5 +345,5 @@ class YandexSpeechKit {
         return [results];
     }
 }
-exports.YandexSpeechKit = YandexSpeechKit;
-//# sourceMappingURL=YandexSpeechKit.node.js.map
+exports.YandexGpt = YandexGpt;
+//# sourceMappingURL=YandexGpt.node.js.map
