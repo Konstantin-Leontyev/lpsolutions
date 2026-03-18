@@ -33,18 +33,12 @@
     nano .env  # Заполните ВСЕ переменные!
     ```
 
-6.  **Скопируйте VPN-конфиг на сервер (до первого запуска)**  
-    Стек выводит трафик n8n в интернет через VPN. Файл `amnezia_for_awg.conf` — в корне проекта (без опций AmneziaWG: Jc, Jmin, Jmax, S1, S2, H1–H4; при необходимости удалите эти строки из конфига).
-    ```bash
-    scp amnezia_for_awg.conf <пользователь>@<сервер>:/opt/lpsolutions/
-    ```
-
-7.  **Запустите стек**
+6.  **Запустите стек**
     ```bash
     docker compose up -d
     ```
 
-8. **Скачайте модель в контейнер Ollama:**
+7. **Скачайте модель в контейнер Ollama:**
     ```bash
     docker compose exec ollama ollama pull <название_модели>
 
@@ -61,9 +55,6 @@ docker compose down
 docker compose up -d
 ```
 
-Проверка VPN: `docker compose logs amnezia-client --tail 20` и  
-`docker compose exec n8n sh -c 'curl -s --proxy http://privoxy:8118 https://ifconfig.me'` (должен вернуть IP выхода VPN).
-
 ## 🔧 Использование
 
 ### Доступ к n8n
@@ -77,28 +68,7 @@ docker compose up -d
 
 ### Кастомная нода Yandex GPT
 
-Сборка ноды лежит в репо: `custom-nodes/n8n-nodes-yandex-gpt/` (package.json + dist). Том в docker-compose монтирует `./custom-nodes` в контейнер — отдельный скрипт на сервере не нужен.
-
-**На сервере после git pull:**
-```bash
-cd /opt/lpsolutions
-git pull
-docker compose up -d n8n
-```
-
-**Обновление ноды (локально):** пересобрать в репо n8n-nodes-yandex-gpt, скопировать в lpsolutions, закоммитить и push:
-```bash
-# в n8n-nodes-yandex-gpt
-npm run build
-
-# в lpsolutions
-./update-custom-node.sh
-# или с другим путём: ./update-custom-node.sh /path/to/n8n-nodes-yandex-gpt
-
-git add custom-nodes/
-git commit -m "chore: update Yandex GPT node"
-git push
-```
+Сборка ноды лежит в репо: `custom-nodes/n8n-nodes-yandex-gpt/` (package.json + dist). Том в docker-compose монтирует `./custom-nodes` в контейнер.
 
 ### Отладка n8n (полные логи)
 
