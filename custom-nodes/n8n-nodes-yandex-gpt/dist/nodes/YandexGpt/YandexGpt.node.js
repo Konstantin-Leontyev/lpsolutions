@@ -112,11 +112,10 @@ class YandexGpt {
             group: ['transform'],
             version: [1],
             subtitle: '={{$parameter.operation === "transcribe" ? "Transcribe a recording" : "Generate audio"}}',
-            description: 'Transcribe audio or generate speech via Yandex SpeechKit (YandexGPT). Uses API v3 for both STT and TTS. STT: WAV, OggOpus, MP3; no 1 MB/30 s limit.',
+            description: ' ',
             defaults: {
                 name: 'YandexGPT',
             },
-            usableAsTool: true,
             inputs: [n8n_workflow_1.NodeConnectionTypes.Main],
             outputs: [n8n_workflow_1.NodeConnectionTypes.Main],
             credentials: [
