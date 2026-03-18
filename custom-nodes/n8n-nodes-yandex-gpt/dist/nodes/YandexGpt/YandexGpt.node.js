@@ -9,12 +9,12 @@ const OPERATIONS_URL = 'https://operation.api.cloud.yandex.net';
 const POLL_INTERVAL_MS = 1000;
 const POLL_TIMEOUT_MS = 10 * 60 * 1000;
 const LOCALE_OPTIONS = [
-    { name: 'ru-RU (русский)', value: 'ru-RU' },
-    { name: 'en-US (английский)', value: 'en-US' },
-    { name: 'de-DE (немецкий)', value: 'de-DE' },
-    { name: 'he-IL (иврит)', value: 'he-IL' },
-    { name: 'kk-KZ (казахский)', value: 'kk-KZ' },
-    { name: 'uz-UZ (узбекский)', value: 'uz-UZ' },
+    { name: 'Ru-RU (Русский)', value: 'ru-RU' },
+    { name: 'En-US (Английский)', value: 'en-US' },
+    { name: 'De-DE (Немецкий)', value: 'de-DE' },
+    { name: 'He-IL (Иврит)', value: 'he-IL' },
+    { name: 'Kk-KZ (Казахский)', value: 'kk-KZ' },
+    { name: 'Uz-UZ (Узбекский)', value: 'uz-UZ' },
 ];
 const VOICES_BY_LOCALE = {
     'ru-RU': [
@@ -44,6 +44,40 @@ const VOICES_BY_LOCALE = {
     'kk-KZ': ['amira', 'madi', 'saule', 'zhanar'],
     'uz-UZ': ['nigora', 'zamira', 'yulduz'],
 };
+const ROLES_BY_VOICE = {
+    lea: [],
+    john: [],
+    naomi: ['modern', 'classic'],
+    amira: [],
+    madi: [],
+    saule: ['neutral', 'strict'],
+    zhanar: ['neutral', 'friendly'],
+    alena: ['neutral', 'good'],
+    filipp: [],
+    ermil: ['neutral', 'good'],
+    jane: ['neutral', 'good', 'evil'],
+    omazh: ['neutral', 'evil'],
+    zahar: ['neutral', 'good'],
+    dasha: ['neutral', 'good', 'friendly'],
+    julia: ['neutral', 'strict'],
+    lera: ['neutral', 'friendly'],
+    masha: ['good', 'strict', 'friendly'],
+    marina: ['neutral', 'whisper', 'friendly'],
+    alexander: ['neutral', 'good'],
+    kirill: ['neutral', 'strict', 'good'],
+    anton: ['neutral', 'good'],
+    madi_ru: [],
+    saule_ru: ['neutral', 'strict', 'whisper'],
+    zamira_ru: ['neutral', 'strict', 'friendly'],
+    zhanar_ru: ['neutral', 'strict', 'friendly'],
+    yulduz_ru: ['neutral', 'strict', 'friendly', 'whisper'],
+    nigora: [],
+    zamira: ['neutral', 'strict', 'friendly'],
+    yulduz: ['neutral', 'strict', 'friendly', 'whisper'],
+};
+const VOICES_WITHOUT_ROLES = Object.entries(ROLES_BY_VOICE)
+    .filter(([, roles]) => roles.length === 0)
+    .map(([voice]) => voice);
 function formatVoiceLabel(voiceValue, locale) {
     let base = voiceValue;
     if (locale === 'ru-RU') {
@@ -55,8 +89,15 @@ function formatVoiceLabel(voiceValue, locale) {
         .map((w) => w[0].toUpperCase() + w.slice(1))
         .join('');
 }
+function formatRoleLabel(roleValue) {
+    return roleValue
+        .split(/_/g)
+        .filter(Boolean)
+        .map((w) => w[0].toUpperCase() + w.slice(1))
+        .join('');
+}
 function extractFirstJsonPayload(text) {
-    const start = text.search(/[\[{]/);
+    const start = text.search(/[{[]/);
     if (start < 0)
         return null;
     let depth = 0;
@@ -96,7 +137,7 @@ function extractAllJsonPayloads(text) {
     const payloads = [];
     let i = 0;
     while (i < text.length) {
-        const start = text.slice(i).search(/[\[{]/);
+        const start = text.slice(i).search(/[{[]/);
         if (start < 0)
             break;
         const absoluteStart = i + start;
@@ -386,12 +427,12 @@ class YandexGpt {
                     },
                 },
                 {
-                    displayName: 'Voice',
+                    displayName: 'Voice Name or ID',
                     name: 'voice',
                     type: 'options',
                     default: 'marina',
                     noDataExpression: true,
-                    description: 'SpeechKit voice.',
+                    description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
                     typeOptions: {
                         loadOptionsMethod: 'getVoices',
                         loadOptionsDependsOn: ['language'],
@@ -404,11 +445,22 @@ class YandexGpt {
                     },
                 },
                 {
-                    displayName: 'Role',
+                    displayName: 'Role Name or ID',
                     name: 'role',
-                    type: 'string',
-                    default: 'friendly',
-                    description: 'Voice role/character (e.g. friendly)',
+                    type: 'options',
+                    default: '',
+                    description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+                    hint: `={{ ${JSON.stringify(VOICES_WITHOUT_ROLES)}.includes($parameter.voice) ? 'No roles available for the selected voice' : '' }}`,
+                    noDataExpression: true,
+                    disabledOptions: {
+                        show: {
+                            voice: VOICES_WITHOUT_ROLES,
+                        },
+                    },
+                    typeOptions: {
+                        loadOptionsMethod: 'getRoles',
+                        loadOptionsDependsOn: ['voice'],
+                    },
                     displayOptions: {
                         show: {
                             resource: ['audio'],
@@ -429,11 +481,21 @@ class YandexGpt {
                         value: v,
                     }));
                 },
+                async getRoles() {
+                    const voice = this.getCurrentNodeParameter('voice');
+                    const roles = voice ? ROLES_BY_VOICE[voice] : [];
+                    if (!roles || roles.length === 0)
+                        return [];
+                    return roles.map((r) => ({
+                        name: formatRoleLabel(r),
+                        value: r,
+                    }));
+                },
             },
         };
     }
     async execute() {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c, _d, _e, _f;
         const items = this.getInputData();
         const credentials = await this.getCredentials('yandexGptApi');
         const operation = this.getNodeParameter('operation', 0);
@@ -487,13 +549,15 @@ class YandexGpt {
                 const text = this.getNodeParameter('text', itemIndex, '');
                 const voiceParam = this.getNodeParameter('voice', itemIndex, allowedVoices[0]);
                 const voice = allowedVoices.includes(voiceParam) ? voiceParam : allowedVoices[0];
-                const role = this.getNodeParameter('role', itemIndex, 'friendly');
+                const roleParam = this.getNodeParameter('role', itemIndex, '');
+                const allowedRoles = (_b = ROLES_BY_VOICE[voice]) !== null && _b !== void 0 ? _b : [];
+                const roleToUse = allowedRoles.includes(roleParam) ? roleParam : allowedRoles[0];
                 if (!text || String(text).trim() === '') {
                     throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Text is required for synthesis', { itemIndex });
                 }
                 const payload = {
                     text: String(text).trim(),
-                    hints: [{ voice }, { role }],
+                    hints: roleToUse ? [{ voice }, { role: roleToUse }] : [{ voice }],
                 };
                 const response = await fetch(YANDEX_TTS_URL, {
                     method: 'POST',
@@ -508,15 +572,15 @@ class YandexGpt {
                     let msg = response.statusText;
                     try {
                         const err = await parseJsonResponse(response);
-                        msg = (_c = (_b = err === null || err === void 0 ? void 0 : err.error) === null || _b === void 0 ? void 0 : _b.message) !== null && _c !== void 0 ? _c : msg;
+                        msg = (_d = (_c = err === null || err === void 0 ? void 0 : err.error) === null || _c === void 0 ? void 0 : _c.message) !== null && _d !== void 0 ? _d : msg;
                     }
                     catch {
                     }
                     throw new n8n_workflow_1.NodeOperationError(this.getNode(), `Ошибка API (${response.status}): ${msg}`, { itemIndex });
                 }
                 const data = await parseJsonResponse(response);
-                const result = (_d = data === null || data === void 0 ? void 0 : data.result) !== null && _d !== void 0 ? _d : {};
-                const chunk = (_e = result === null || result === void 0 ? void 0 : result.audioChunk) !== null && _e !== void 0 ? _e : {};
+                const result = (_e = data === null || data === void 0 ? void 0 : data.result) !== null && _e !== void 0 ? _e : {};
+                const chunk = (_f = result === null || result === void 0 ? void 0 : result.audioChunk) !== null && _f !== void 0 ? _f : {};
                 const b64 = chunk === null || chunk === void 0 ? void 0 : chunk.data;
                 if (!b64) {
                     throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'В ответе API нет аудиоданных (result.audioChunk.data)', { itemIndex });

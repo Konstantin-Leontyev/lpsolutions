@@ -4,6 +4,7 @@ export declare class YandexGpt implements INodeType {
     methods: {
         loadOptions: {
             getVoices(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]>;
+            getRoles(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]>;
         };
     };
     execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]>;
