@@ -449,8 +449,7 @@ class YandexGpt {
                     name: 'role',
                     type: 'options',
                     default: '',
-                    description: 'Интонация/характер речи',
-                    hint: 'Интонация/характер речи. Для некоторых голосов роли недоступны (поле отключается).',
+                    description: 'Intonation / speech style',
                     noDataExpression: true,
                     disabledOptions: {
                         show: {
@@ -485,7 +484,7 @@ class YandexGpt {
                     const voice = this.getCurrentNodeParameter('voice');
                     const roles = voice ? ROLES_BY_VOICE[voice] : [];
                     if (!roles || roles.length === 0)
-                        return [];
+                        return [{ name: '', value: '' }];
                     return roles.map((r) => ({
                         name: formatRoleLabel(r),
                         value: r,
