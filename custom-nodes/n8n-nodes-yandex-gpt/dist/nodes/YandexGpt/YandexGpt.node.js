@@ -483,8 +483,14 @@ class YandexGpt {
                 async getRoles() {
                     const voice = this.getCurrentNodeParameter('voice');
                     const roles = voice ? ROLES_BY_VOICE[voice] : [];
-                    if (!roles || roles.length === 0)
-                        return [{ name: '', value: '' }];
+                    if (!roles || roles.length === 0) {
+                        return [
+                            {
+                                name: 'No roles available for the selected voice',
+                                value: '',
+                            },
+                        ];
+                    }
                     return roles.map((r) => ({
                         name: formatRoleLabel(r),
                         value: r,
