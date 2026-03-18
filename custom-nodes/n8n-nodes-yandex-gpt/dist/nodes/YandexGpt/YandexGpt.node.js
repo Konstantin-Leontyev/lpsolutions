@@ -431,7 +431,6 @@ class YandexGpt {
                     name: 'voice',
                     type: 'options',
                     default: "={{ $parameter.language === 'ru-RU' ? 'marina' : $parameter.language === 'en-US' ? 'john' : $parameter.language === 'de-DE' ? 'lea' : $parameter.language === 'he-IL' ? 'naomi' : $parameter.language === 'kk-KZ' ? 'amira' : 'nigora' }}",
-                    noDataExpression: true,
                     description: 'Choose voice from the list',
                     typeOptions: {
                         loadOptionsMethod: 'getVoices',
@@ -450,7 +449,6 @@ class YandexGpt {
                     type: 'options',
                     default: "={{ ({ naomi: 'modern', saule: 'neutral', zhanar: 'neutral', alena: 'neutral', ermil: 'neutral', jane: 'neutral', omazh: 'neutral', zahar: 'neutral', dasha: 'neutral', julia: 'neutral', lera: 'neutral', masha: 'good', marina: 'neutral', alexander: 'neutral', kirill: 'neutral', anton: 'neutral', saule_ru: 'neutral', zamira_ru: 'neutral', zhanar_ru: 'neutral', yulduz_ru: 'neutral', zamira: 'neutral', yulduz: 'neutral' })[$parameter.voice] ?? '' }}",
                     description: 'Intonation / speech style',
-                    noDataExpression: true,
                     disabledOptions: {
                         show: {
                             voice: VOICES_WITHOUT_ROLES,
@@ -486,7 +484,7 @@ class YandexGpt {
                     if (!roles || roles.length === 0) {
                         return [
                             {
-                                name: 'No roles available for the selected voice',
+                                name: 'No Roles Available for the Selected Voice',
                                 value: '',
                             },
                         ];
