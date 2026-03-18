@@ -8,6 +8,56 @@ const STT_GET_RECOGNITION_URL = 'https://stt.api.cloud.yandex.net:443/stt/v3/get
 const OPERATIONS_URL = 'https://operation.api.cloud.yandex.net';
 const POLL_INTERVAL_MS = 1000;
 const POLL_TIMEOUT_MS = 10 * 60 * 1000;
+function extractFirstJsonPayload(text) {
+    const start = text.search(/[\[{]/);
+    if (start < 0)
+        return null;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let i = start; i < text.length; i++) {
+        const ch = text[i];
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (ch === '\\') {
+                escaped = true;
+                continue;
+            }
+            if (ch === '"') {
+                inString = false;
+            }
+            continue;
+        }
+        if (ch === '"') {
+            inString = true;
+            continue;
+        }
+        if (ch === '{' || ch === '[')
+            depth++;
+        if (ch === '}' || ch === ']')
+            depth--;
+        if (depth === 0) {
+            return text.slice(start, i + 1);
+        }
+    }
+    return null;
+}
+async function parseJsonResponse(res) {
+    const raw = await res.text();
+    try {
+        return JSON.parse(raw);
+    }
+    catch {
+        const extracted = extractFirstJsonPayload(raw);
+        if (extracted) {
+            return JSON.parse(extracted);
+        }
+        throw new n8n_workflow_1.ApplicationError(`Failed to parse JSON response: ${raw.slice(0, 500)}`);
+    }
+}
 function detectAudioFormat(buffer) {
     if (buffer.length < 4)
         return null;
@@ -56,7 +106,7 @@ async function recognizeFileV3(apiKey, folderId, audioBuffer, containerType, lan
         const errText = await initRes.text();
         throw new n8n_workflow_1.ApplicationError(`recognizeFileAsync failed (${initRes.status}): ${errText}`);
     }
-    const op = (await initRes.json());
+    const op = await parseJsonResponse(initRes);
     const operationId = op === null || op === void 0 ? void 0 : op.id;
     if (!operationId) {
         throw new n8n_workflow_1.ApplicationError('No operation id in recognizeFileAsync response');
@@ -70,7 +120,7 @@ async function recognizeFileV3(apiKey, folderId, audioBuffer, containerType, lan
             await (0, n8n_workflow_1.sleep)(POLL_INTERVAL_MS);
             continue;
         }
-        const poll = (await pollRes.json());
+        const poll = await parseJsonResponse(pollRes);
         if ((_a = poll.error) === null || _a === void 0 ? void 0 : _a.message) {
             throw new n8n_workflow_1.ApplicationError(`Recognition failed: ${poll.error.message}`);
         }
@@ -89,7 +139,7 @@ async function recognizeFileV3(apiKey, folderId, audioBuffer, containerType, lan
         const errText = await getRes.text();
         throw new n8n_workflow_1.ApplicationError(`getRecognition failed (${getRes.status}): ${errText}`);
     }
-    const getData = (await getRes.json());
+    const getData = await parseJsonResponse(getRes);
     const parts = [];
     const list = (_b = getData === null || getData === void 0 ? void 0 : getData.streaming_responses) !== null && _b !== void 0 ? _b : [];
     for (const msg of list) {
@@ -300,14 +350,14 @@ class YandexGpt {
                 if (!response.ok) {
                     let msg = response.statusText;
                     try {
-                        const err = (await response.json());
+                        const err = await parseJsonResponse(response);
                         msg = (_b = (_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) !== null && _b !== void 0 ? _b : msg;
                     }
                     catch {
                     }
                     throw new n8n_workflow_1.NodeOperationError(this.getNode(), `Ошибка API (${response.status}): ${msg}`, { itemIndex });
                 }
-                const data = (await response.json());
+                const data = await parseJsonResponse(response);
                 const result = (_c = data === null || data === void 0 ? void 0 : data.result) !== null && _c !== void 0 ? _c : {};
                 const chunk = (_d = result === null || result === void 0 ? void 0 : result.audioChunk) !== null && _d !== void 0 ? _d : {};
                 const b64 = chunk === null || chunk === void 0 ? void 0 : chunk.data;
