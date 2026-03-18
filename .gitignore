@@ -24,6 +24,3 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
-
-# Личные заметки (локально)
-README.private.md
