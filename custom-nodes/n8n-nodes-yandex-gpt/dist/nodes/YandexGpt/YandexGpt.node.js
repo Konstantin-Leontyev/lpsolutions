@@ -427,12 +427,12 @@ class YandexGpt {
                     },
                 },
                 {
-                    displayName: 'Voice Name or ID',
+                    displayName: 'Voice',
                     name: 'voice',
                     type: 'options',
                     default: 'marina',
                     noDataExpression: true,
-                    description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+                    description: 'Choose voice from the list',
                     typeOptions: {
                         loadOptionsMethod: 'getVoices',
                         loadOptionsDependsOn: ['language'],
@@ -445,12 +445,12 @@ class YandexGpt {
                     },
                 },
                 {
-                    displayName: 'Role Name or ID',
+                    displayName: 'Role',
                     name: 'role',
                     type: 'options',
                     default: '',
-                    description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-                    hint: `={{ ${JSON.stringify(VOICES_WITHOUT_ROLES)}.includes($parameter.voice) ? 'No roles available for the selected voice' : '' }}`,
+                    description: 'Интонация/характер речи',
+                    hint: 'Интонация/характер речи. Для некоторых голосов роли недоступны (поле отключается).',
                     noDataExpression: true,
                     disabledOptions: {
                         show: {
