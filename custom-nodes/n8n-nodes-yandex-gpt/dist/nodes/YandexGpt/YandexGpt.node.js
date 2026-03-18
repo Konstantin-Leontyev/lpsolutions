@@ -45,6 +45,52 @@ function extractFirstJsonPayload(text) {
     }
     return null;
 }
+function extractAllJsonPayloads(text) {
+    const payloads = [];
+    let i = 0;
+    while (i < text.length) {
+        const start = text.slice(i).search(/[\[{]/);
+        if (start < 0)
+            break;
+        const absoluteStart = i + start;
+        let depth = 0;
+        let inString = false;
+        let escaped = false;
+        for (let j = absoluteStart; j < text.length; j++) {
+            const ch = text[j];
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+                if (ch === '\\') {
+                    escaped = true;
+                    continue;
+                }
+                if (ch === '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (ch === '"') {
+                inString = true;
+                continue;
+            }
+            if (ch === '{' || ch === '[')
+                depth++;
+            if (ch === '}' || ch === ']')
+                depth--;
+            if (depth === 0) {
+                payloads.push(text.slice(absoluteStart, j + 1));
+                i = j + 1;
+                break;
+            }
+        }
+        if (payloads.length === 0 || i <= absoluteStart)
+            break;
+    }
+    return payloads;
+}
 async function parseJsonResponse(res) {
     const raw = await res.text();
     try {
@@ -57,6 +103,36 @@ async function parseJsonResponse(res) {
         }
         throw new n8n_workflow_1.ApplicationError(`Failed to parse JSON response: ${raw.slice(0, 500)}`);
     }
+}
+async function parseJsonStreamResponse(res) {
+    const raw = await res.text();
+    try {
+        const one = JSON.parse(raw);
+        return [one];
+    }
+    catch {
+    }
+    const lines = raw
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith('{') || l.startsWith('['));
+    const parsed = [];
+    for (const line of lines) {
+        try {
+            parsed.push(JSON.parse(line));
+        }
+        catch {
+        }
+    }
+    if (parsed.length > 0)
+        return parsed;
+    const payloads = extractAllJsonPayloads(raw);
+    for (const p of payloads) {
+        parsed.push(JSON.parse(p));
+    }
+    if (parsed.length > 0)
+        return parsed;
+    throw new n8n_workflow_1.ApplicationError(`Failed to parse JSON stream response: ${raw.slice(0, 500)}`);
 }
 function detectAudioFormat(buffer) {
     if (buffer.length < 4)
@@ -73,7 +149,7 @@ function detectAudioFormat(buffer) {
     return null;
 }
 async function recognizeFileV3(apiKey, folderId, audioBuffer, containerType, languageCode) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
     const containerTypeValue = containerType === 'WAV' ? 1 : containerType === 'OGG_OPUS' ? 2 : 3;
     const recognitionModel = {
         model: 'general',
@@ -139,19 +215,30 @@ async function recognizeFileV3(apiKey, folderId, audioBuffer, containerType, lan
         const errText = await getRes.text();
         throw new n8n_workflow_1.ApplicationError(`getRecognition failed (${getRes.status}): ${errText}`);
     }
-    const getData = await parseJsonResponse(getRes);
+    const payloads = await parseJsonStreamResponse(getRes);
     const parts = [];
-    const list = (_b = getData === null || getData === void 0 ? void 0 : getData.streaming_responses) !== null && _b !== void 0 ? _b : [];
-    for (const msg of list) {
-        const alt = (_d = (_c = msg.final) === null || _c === void 0 ? void 0 : _c.alternatives) !== null && _d !== void 0 ? _d : (_e = msg.partial) === null || _e === void 0 ? void 0 : _e.alternatives;
-        if (alt) {
-            for (const a of alt) {
-                if (a.text)
-                    parts.push(a.text);
+    for (const p of payloads) {
+        const list = p === null || p === void 0 ? void 0 : p.streaming_responses;
+        if (list === null || list === void 0 ? void 0 : list.length) {
+            for (const msg of list) {
+                const alt = (_c = (_b = msg.final) === null || _b === void 0 ? void 0 : _b.alternatives) !== null && _c !== void 0 ? _c : (_d = msg.partial) === null || _d === void 0 ? void 0 : _d.alternatives;
+                if (alt) {
+                    for (const a of alt)
+                        if (a.text)
+                            parts.push(a.text);
+                }
             }
+            continue;
+        }
+        const result = p === null || p === void 0 ? void 0 : p.result;
+        const alt1 = (_f = (_e = result === null || result === void 0 ? void 0 : result.final) === null || _e === void 0 ? void 0 : _e.alternatives) !== null && _f !== void 0 ? _f : [];
+        const alt2 = (_j = (_h = (_g = result === null || result === void 0 ? void 0 : result.finalRefinement) === null || _g === void 0 ? void 0 : _g.normalizedText) === null || _h === void 0 ? void 0 : _h.alternatives) !== null && _j !== void 0 ? _j : [];
+        for (const a of [...alt2, ...alt1]) {
+            if (a === null || a === void 0 ? void 0 : a.text)
+                parts.push(a.text);
         }
     }
-    return parts.join(' ').trim() || '';
+    return ((_k = parts.filter(Boolean).slice(-1)[0]) === null || _k === void 0 ? void 0 : _k.trim()) || parts.join(' ').trim() || '';
 }
 class YandexGpt {
     constructor() {
