@@ -8,6 +8,53 @@ const STT_GET_RECOGNITION_URL = 'https://stt.api.cloud.yandex.net:443/stt/v3/get
 const OPERATIONS_URL = 'https://operation.api.cloud.yandex.net';
 const POLL_INTERVAL_MS = 1000;
 const POLL_TIMEOUT_MS = 10 * 60 * 1000;
+const LOCALE_OPTIONS = [
+    { name: 'ru-RU (русский)', value: 'ru-RU' },
+    { name: 'en-US (английский)', value: 'en-US' },
+    { name: 'de-DE (немецкий)', value: 'de-DE' },
+    { name: 'he-IL (иврит)', value: 'he-IL' },
+    { name: 'kk-KZ (казахский)', value: 'kk-KZ' },
+    { name: 'uz-UZ (узбекский)', value: 'uz-UZ' },
+];
+const VOICES_BY_LOCALE = {
+    'ru-RU': [
+        'marina',
+        'alena',
+        'dasha',
+        'julia',
+        'lera',
+        'masha',
+        'saule_ru',
+        'zamira_ru',
+        'zhanar_ru',
+        'yulduz_ru',
+        'jane',
+        'omazh',
+        'alexander',
+        'kirill',
+        'anton',
+        'filipp',
+        'ermil',
+        'zahar',
+        'madi_ru',
+    ],
+    'en-US': ['john'],
+    'de-DE': ['lea'],
+    'he-IL': ['naomi'],
+    'kk-KZ': ['amira', 'madi', 'saule', 'zhanar'],
+    'uz-UZ': ['nigora', 'zamira', 'yulduz'],
+};
+function formatVoiceLabel(voiceValue, locale) {
+    let base = voiceValue;
+    if (locale === 'ru-RU') {
+        base = base.replace(/_ru$/, '');
+    }
+    return base
+        .split(/_/g)
+        .filter(Boolean)
+        .map((w) => w[0].toUpperCase() + w.slice(1))
+        .join('');
+}
 function extractFirstJsonPayload(text) {
     const start = text.search(/[\[{]/);
     if (start < 0)
@@ -311,16 +358,18 @@ class YandexGpt {
                 },
                 {
                     displayName: 'Language',
-                    name: 'lang',
-                    type: 'string',
+                    name: 'language',
+                    type: 'options',
+                    noDataExpression: true,
                     default: 'ru-RU',
-                    description: 'Recognition language code',
+                    description: 'SpeechKit language',
                     displayOptions: {
                         show: {
                             resource: ['audio'],
-                            operation: ['transcribe'],
+                            operation: ['transcribe', 'generate'],
                         },
                     },
+                    options: LOCALE_OPTIONS,
                 },
                 {
                     displayName: 'Text',
@@ -339,9 +388,14 @@ class YandexGpt {
                 {
                     displayName: 'Voice',
                     name: 'voice',
-                    type: 'string',
+                    type: 'options',
                     default: 'marina',
-                    description: 'SpeechKit voice (e.g. marina, alena)',
+                    noDataExpression: true,
+                    description: 'SpeechKit voice.',
+                    typeOptions: {
+                        loadOptionsMethod: 'getVoices',
+                        loadOptionsDependsOn: ['language'],
+                    },
                     displayOptions: {
                         show: {
                             resource: ['audio'],
@@ -364,15 +418,28 @@ class YandexGpt {
                 },
             ],
         };
+        this.methods = {
+            loadOptions: {
+                async getVoices() {
+                    const languageRaw = this.getCurrentNodeParameter('language');
+                    const locale = languageRaw && languageRaw in VOICES_BY_LOCALE ? languageRaw : 'ru-RU';
+                    const voices = VOICES_BY_LOCALE[locale];
+                    return voices.map((v) => ({
+                        name: formatVoiceLabel(v, locale),
+                        value: v,
+                    }));
+                },
+            },
+        };
     }
     async execute() {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e;
         const items = this.getInputData();
         const credentials = await this.getCredentials('yandexGptApi');
         const operation = this.getNodeParameter('operation', 0);
         if (operation === 'transcribe') {
             const binaryPropertyName = this.getNodeParameter('binaryPropertyName', 0, 'data');
-            const lang = this.getNodeParameter('lang', 0, 'ru-RU');
+            const language = this.getNodeParameter('language', 0, 'ru-RU');
             const results = [];
             for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
                 try {
@@ -384,7 +451,7 @@ class YandexGpt {
                     if (!format) {
                         throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Unsupported audio format. Use WAV, OggOpus, or MP3.', { itemIndex });
                     }
-                    const transcription = await recognizeFileV3(credentials.apiKey, credentials.folderId, buffer, format, lang);
+                    const transcription = await recognizeFileV3(credentials.apiKey, credentials.folderId, buffer, format, language);
                     results.push({
                         json: { ...items[itemIndex].json, transcription },
                         pairedItem: { item: itemIndex },
@@ -415,8 +482,11 @@ class YandexGpt {
         const results = [];
         for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
             try {
+                const language = this.getNodeParameter('language', itemIndex, 'ru-RU');
+                const allowedVoices = (_a = VOICES_BY_LOCALE[language]) !== null && _a !== void 0 ? _a : VOICES_BY_LOCALE['ru-RU'];
                 const text = this.getNodeParameter('text', itemIndex, '');
-                const voice = this.getNodeParameter('voice', itemIndex, 'marina');
+                const voiceParam = this.getNodeParameter('voice', itemIndex, allowedVoices[0]);
+                const voice = allowedVoices.includes(voiceParam) ? voiceParam : allowedVoices[0];
                 const role = this.getNodeParameter('role', itemIndex, 'friendly');
                 if (!text || String(text).trim() === '') {
                     throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Text is required for synthesis', { itemIndex });
@@ -438,15 +508,15 @@ class YandexGpt {
                     let msg = response.statusText;
                     try {
                         const err = await parseJsonResponse(response);
-                        msg = (_b = (_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) !== null && _b !== void 0 ? _b : msg;
+                        msg = (_c = (_b = err === null || err === void 0 ? void 0 : err.error) === null || _b === void 0 ? void 0 : _b.message) !== null && _c !== void 0 ? _c : msg;
                     }
                     catch {
                     }
                     throw new n8n_workflow_1.NodeOperationError(this.getNode(), `Ошибка API (${response.status}): ${msg}`, { itemIndex });
                 }
                 const data = await parseJsonResponse(response);
-                const result = (_c = data === null || data === void 0 ? void 0 : data.result) !== null && _c !== void 0 ? _c : {};
-                const chunk = (_d = result === null || result === void 0 ? void 0 : result.audioChunk) !== null && _d !== void 0 ? _d : {};
+                const result = (_d = data === null || data === void 0 ? void 0 : data.result) !== null && _d !== void 0 ? _d : {};
+                const chunk = (_e = result === null || result === void 0 ? void 0 : result.audioChunk) !== null && _e !== void 0 ? _e : {};
                 const b64 = chunk === null || chunk === void 0 ? void 0 : chunk.data;
                 if (!b64) {
                     throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'В ответе API нет аудиоданных (result.audioChunk.data)', { itemIndex });
