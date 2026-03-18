@@ -163,9 +163,6 @@ services:
       N8N_BULL_MQ_REDIS_HOST: redis
       N8N_BULL_MQ_REDIS_PORT: 6379
       EXTERNAL_FRONTEND_HOOKS_URLS: "https://${DOMAIN}"
-
-      # Кастомная нода: entrypoint ставит в ~/.n8n/nodes; явно указываем папку с пакетом
-      N8N_CUSTOM_EXTENSIONS: /home/node/.n8n/custom-nodes
       N8N_LOG_LEVEL: debug
     entrypoint: ["sh", "/entrypoint-n8n.sh"]
     command: ["n8n", "start"]
