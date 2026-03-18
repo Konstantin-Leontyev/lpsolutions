@@ -430,7 +430,7 @@ class YandexGpt {
                     displayName: 'Voice',
                     name: 'voice',
                     type: 'options',
-                    default: 'marina',
+                    default: "={{ $parameter.language === 'ru-RU' ? 'marina' : $parameter.language === 'en-US' ? 'john' : $parameter.language === 'de-DE' ? 'lea' : $parameter.language === 'he-IL' ? 'naomi' : $parameter.language === 'kk-KZ' ? 'amira' : 'nigora' }}",
                     noDataExpression: true,
                     description: 'Choose voice from the list',
                     typeOptions: {
@@ -448,7 +448,7 @@ class YandexGpt {
                     displayName: 'Role',
                     name: 'role',
                     type: 'options',
-                    default: '',
+                    default: "={{ ({ naomi: 'modern', saule: 'neutral', zhanar: 'neutral', alena: 'neutral', ermil: 'neutral', jane: 'neutral', omazh: 'neutral', zahar: 'neutral', dasha: 'neutral', julia: 'neutral', lera: 'neutral', masha: 'good', marina: 'neutral', alexander: 'neutral', kirill: 'neutral', anton: 'neutral', saule_ru: 'neutral', zamira_ru: 'neutral', zhanar_ru: 'neutral', yulduz_ru: 'neutral', zamira: 'neutral', yulduz: 'neutral' })[$parameter.voice] ?? '' }}",
                     description: 'Intonation / speech style',
                     noDataExpression: true,
                     disabledOptions: {
