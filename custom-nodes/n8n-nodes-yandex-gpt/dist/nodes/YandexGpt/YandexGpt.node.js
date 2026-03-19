@@ -430,7 +430,7 @@ class YandexGpt {
                     displayName: 'Voice',
                     name: 'voice',
                     type: 'options',
-                    default: 'marina',
+                    default: '',
                     noDataExpression: true,
                     description: 'Choose voice from the list',
                     typeOptions: {
