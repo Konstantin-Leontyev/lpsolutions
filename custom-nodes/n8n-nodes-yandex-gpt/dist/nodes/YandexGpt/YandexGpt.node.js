@@ -133,8 +133,9 @@ function buildTtsRoleOptions() {
         if (roles.length === 0)
             continue;
         for (const r of roles) {
+            const name = r === 'neutral' ? 'Natural' : formatRoleLabel(r);
             out.push({
-                name: formatRoleLabel(r),
+                name,
                 value: r,
                 displayOptions: {
                     show: {
@@ -148,8 +149,7 @@ function buildTtsRoleOptions() {
 }
 const TTS_VOICE_OPTIONS = buildTtsVoiceOptions();
 const TTS_ROLE_OPTIONS = buildTtsRoleOptions();
-const DEFAULT_VOICE_BY_LANGUAGE_JSON = JSON.stringify(Object.fromEntries(Object.keys(VOICES_BY_LOCALE).map((l) => [l, VOICES_BY_LOCALE[l][0]])));
-const DEFAULT_ROLE_BY_VOICE_JSON = JSON.stringify(Object.fromEntries(Object.entries(ROLES_BY_VOICE).map(([v, roles]) => { var _a; return [v, (_a = roles[0]) !== null && _a !== void 0 ? _a : '']; })));
+const DEFAULT_TTS_VOICE_RU = 'alexander';
 function extractFirstJsonPayload(text) {
     const start = text.search(/[{[]/);
     if (start < 0)
@@ -484,7 +484,8 @@ class YandexGpt {
                     displayName: 'Voice',
                     name: 'voice',
                     type: 'options',
-                    default: `={{ (${DEFAULT_VOICE_BY_LANGUAGE_JSON})[$parameter.language] ?? (${DEFAULT_VOICE_BY_LANGUAGE_JSON})['ru-RU'] }}`,
+                    noDataExpression: true,
+                    default: DEFAULT_TTS_VOICE_RU,
                     description: 'Choose voice from the list (filtered by Language; alphabetical within locale)',
                     options: TTS_VOICE_OPTIONS,
                     displayOptions: {
@@ -498,8 +499,9 @@ class YandexGpt {
                     displayName: 'Role',
                     name: 'role',
                     type: 'options',
-                    default: `={{ (${DEFAULT_ROLE_BY_VOICE_JSON})[$parameter.voice] ?? '' }}`,
-                    description: 'Intonation / speech style (only for voices that support roles; neutral preferred when available)',
+                    noDataExpression: true,
+                    default: 'neutral',
+                    description: 'Intonation / speech style (shown only for voices that support roles; API value neutral shown as Natural)',
                     options: TTS_ROLE_OPTIONS,
                     displayOptions: {
                         show: {
