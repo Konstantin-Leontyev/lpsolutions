@@ -9,11 +9,11 @@ const OPERATIONS_URL = 'https://operation.api.cloud.yandex.net';
 const POLL_INTERVAL_MS = 1000;
 const POLL_TIMEOUT_MS = 10 * 60 * 1000;
 const LOCALE_OPTIONS = [
-    { name: 'Ru-RU (Русский)', value: 'ru-RU' },
-    { name: 'En-US (Английский)', value: 'en-US' },
     { name: 'De-DE (Немецкий)', value: 'de-DE' },
+    { name: 'En-US (Английский)', value: 'en-US' },
     { name: 'He-IL (Иврит)', value: 'he-IL' },
     { name: 'Kk-KZ (Казахский)', value: 'kk-KZ' },
+    { name: 'Ru-RU (Русский)', value: 'ru-RU' },
     { name: 'Uz-UZ (Узбекский)', value: 'uz-UZ' },
 ];
 const VOICES_BY_LOCALE = {
@@ -75,9 +75,12 @@ const ROLES_BY_VOICE = {
     zamira: ['neutral', 'strict', 'friendly'],
     yulduz: ['neutral', 'strict', 'friendly', 'whisper'],
 };
-const VOICES_WITHOUT_ROLES = Object.entries(ROLES_BY_VOICE)
-    .filter(([, roles]) => roles.length === 0)
-    .map(([voice]) => voice);
+for (const key of Object.keys(ROLES_BY_VOICE)) {
+    const roles = ROLES_BY_VOICE[key];
+    if (roles.includes('neutral')) {
+        ROLES_BY_VOICE[key] = ['neutral', ...roles.filter((r) => r !== 'neutral')];
+    }
+}
 function formatVoiceLabel(voiceValue, locale) {
     let base = voiceValue;
     if (locale === 'ru-RU') {
@@ -96,6 +99,57 @@ function formatRoleLabel(roleValue) {
         .map((w) => w[0].toUpperCase() + w.slice(1))
         .join('');
 }
+for (const loc of Object.keys(VOICES_BY_LOCALE)) {
+    VOICES_BY_LOCALE[loc].sort((a, b) => formatVoiceLabel(a, loc).localeCompare(formatVoiceLabel(b, loc), 'en', {
+        sensitivity: 'base',
+    }));
+}
+const VOICES_WITH_ROLES = Object.entries(ROLES_BY_VOICE)
+    .filter(([, roles]) => roles.length > 0)
+    .map(([voice]) => voice);
+function buildTtsVoiceOptions() {
+    const out = [];
+    const localesSorted = Object.keys(VOICES_BY_LOCALE).sort((a, b) => a.localeCompare(b));
+    for (const locale of localesSorted) {
+        for (const v of VOICES_BY_LOCALE[locale]) {
+            out.push({
+                name: formatVoiceLabel(v, locale),
+                value: v,
+                displayOptions: {
+                    show: {
+                        language: [locale],
+                    },
+                },
+            });
+        }
+    }
+    return out;
+}
+function buildTtsRoleOptions() {
+    const out = [];
+    const voicesSorted = Object.keys(ROLES_BY_VOICE).sort((a, b) => a.localeCompare(b));
+    for (const voice of voicesSorted) {
+        const roles = ROLES_BY_VOICE[voice];
+        if (roles.length === 0)
+            continue;
+        for (const r of roles) {
+            out.push({
+                name: formatRoleLabel(r),
+                value: r,
+                displayOptions: {
+                    show: {
+                        voice: [voice],
+                    },
+                },
+            });
+        }
+    }
+    return out;
+}
+const TTS_VOICE_OPTIONS = buildTtsVoiceOptions();
+const TTS_ROLE_OPTIONS = buildTtsRoleOptions();
+const DEFAULT_VOICE_BY_LANGUAGE_JSON = JSON.stringify(Object.fromEntries(Object.keys(VOICES_BY_LOCALE).map((l) => [l, VOICES_BY_LOCALE[l][0]])));
+const DEFAULT_ROLE_BY_VOICE_JSON = JSON.stringify(Object.fromEntries(Object.entries(ROLES_BY_VOICE).map(([v, roles]) => { var _a; return [v, (_a = roles[0]) !== null && _a !== void 0 ? _a : '']; })));
 function extractFirstJsonPayload(text) {
     const start = text.search(/[{[]/);
     if (start < 0)
@@ -430,13 +484,9 @@ class YandexGpt {
                     displayName: 'Voice',
                     name: 'voice',
                     type: 'options',
-                    default: '',
-                    noDataExpression: true,
-                    description: 'Choose voice from the list',
-                    typeOptions: {
-                        loadOptionsMethod: 'getVoices',
-                        loadOptionsDependsOn: ['language'],
-                    },
+                    default: `={{ (${DEFAULT_VOICE_BY_LANGUAGE_JSON})[$parameter.language] ?? (${DEFAULT_VOICE_BY_LANGUAGE_JSON})['ru-RU'] }}`,
+                    description: 'Choose voice from the list (filtered by Language; alphabetical within locale)',
+                    options: TTS_VOICE_OPTIONS,
                     displayOptions: {
                         show: {
                             resource: ['audio'],
@@ -448,55 +498,18 @@ class YandexGpt {
                     displayName: 'Role',
                     name: 'role',
                     type: 'options',
-                    default: '',
-                    noDataExpression: true,
-                    description: 'Intonation / speech style',
-                    disabledOptions: {
-                        show: {
-                            voice: VOICES_WITHOUT_ROLES,
-                        },
-                    },
-                    typeOptions: {
-                        loadOptionsMethod: 'getRoles',
-                        loadOptionsDependsOn: ['voice'],
-                    },
+                    default: `={{ (${DEFAULT_ROLE_BY_VOICE_JSON})[$parameter.voice] ?? '' }}`,
+                    description: 'Intonation / speech style (only for voices that support roles; neutral preferred when available)',
+                    options: TTS_ROLE_OPTIONS,
                     displayOptions: {
                         show: {
                             resource: ['audio'],
                             operation: ['generate'],
+                            voice: VOICES_WITH_ROLES,
                         },
                     },
                 },
             ],
-        };
-        this.methods = {
-            loadOptions: {
-                async getVoices() {
-                    const languageRaw = this.getCurrentNodeParameter('language');
-                    const locale = languageRaw && languageRaw in VOICES_BY_LOCALE ? languageRaw : 'ru-RU';
-                    const voices = VOICES_BY_LOCALE[locale];
-                    return voices.map((v) => ({
-                        name: formatVoiceLabel(v, locale),
-                        value: v,
-                    }));
-                },
-                async getRoles() {
-                    const voice = this.getCurrentNodeParameter('voice');
-                    const roles = voice ? ROLES_BY_VOICE[voice] : [];
-                    if (!roles || roles.length === 0) {
-                        return [
-                            {
-                                name: 'No Roles Available for the Selected Voice',
-                                value: '',
-                            },
-                        ];
-                    }
-                    return roles.map((r) => ({
-                        name: formatRoleLabel(r),
-                        value: r,
-                    }));
-                },
-            },
         };
     }
     async execute() {
