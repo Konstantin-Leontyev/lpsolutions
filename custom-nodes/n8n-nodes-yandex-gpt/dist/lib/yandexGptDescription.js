@@ -62,7 +62,7 @@ function buildYandexGptDescription() {
         group: ['transform'],
         version: [1],
         subtitle: '={{$parameter.resource === "image" ? "Generate an image" : ($parameter.operation === "transcribe" ? "Transcribe a recording" : "Generate audio")}}',
-        description: 'Yandex Cloud SpeechKit (speech synthesis and recognition) and YandexART image generation via Foundation Models.',
+        description: '',
         defaults: {
             name: 'YandexGPT',
         },
