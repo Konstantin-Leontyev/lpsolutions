@@ -12,7 +12,7 @@ function buildYandexGptDescription() {
         group: ['transform'],
         version: [1],
         subtitle: '={{$parameter.resource === "image" ? "Generate an image" : ($parameter.operation === "transcribe" ? "Transcribe a recording" : "Generate audio")}}',
-        description: ' ',
+        description: 'Yandex Cloud SpeechKit (speech synthesis and recognition) and YandexART image generation via Foundation Models.',
         defaults: {
             name: 'YandexGPT',
         },
@@ -47,33 +47,18 @@ function buildYandexGptDescription() {
                         value: 'generate',
                         action: 'Generate audio',
                         description: 'Text-to-speech (TTS)',
-                        displayOptions: {
-                            show: {
-                                resource: ['audio'],
-                            },
-                        },
                     },
                     {
                         name: 'Transcribe A Recording',
                         value: 'transcribe',
                         action: 'Transcribe a recording',
                         description: 'Speech-to-text (STT)',
-                        displayOptions: {
-                            show: {
-                                resource: ['audio'],
-                            },
-                        },
                     },
                     {
                         name: 'Generate An Image',
                         value: 'generateImage',
                         action: 'Generate an image',
                         description: 'YandexART text-to-image (Foundation Models)',
-                        displayOptions: {
-                            show: {
-                                resource: ['image'],
-                            },
-                        },
                     },
                 ],
                 default: 'transcribe',
