@@ -4,6 +4,56 @@ exports.buildYandexGptDescription = buildYandexGptDescription;
 const n8n_workflow_1 = require("n8n-workflow");
 const imageAspect_1 = require("./imageAspect");
 const speechkitVoices_1 = require("./speechkitVoices");
+const audioOperations = [
+    {
+        displayName: 'Operation',
+        name: 'operation',
+        type: 'options',
+        noDataExpression: true,
+        displayOptions: {
+            show: {
+                resource: ['audio'],
+            },
+        },
+        options: [
+            {
+                name: 'Generate Audio',
+                value: 'generate',
+                action: 'Generate audio',
+                description: 'Text-to-speech (TTS)',
+            },
+            {
+                name: 'Transcribe A Recording',
+                value: 'transcribe',
+                action: 'Transcribe a recording',
+                description: 'Speech-to-text (STT)',
+            },
+        ],
+        default: 'generate',
+    },
+];
+const imageOperations = [
+    {
+        displayName: 'Operation',
+        name: 'operation',
+        type: 'options',
+        noDataExpression: true,
+        displayOptions: {
+            show: {
+                resource: ['image'],
+            },
+        },
+        options: [
+            {
+                name: 'Generate An Image',
+                value: 'generateImage',
+                action: 'Generate an image',
+                description: 'YandexART text-to-image (Foundation Models)',
+            },
+        ],
+        default: 'generateImage',
+    },
+];
 function buildYandexGptDescription() {
     return {
         displayName: 'YandexGPT',
@@ -36,33 +86,8 @@ function buildYandexGptDescription() {
                 ],
                 default: 'audio',
             },
-            {
-                displayName: 'Operation',
-                name: 'operation',
-                type: 'options',
-                noDataExpression: true,
-                options: [
-                    {
-                        name: 'Generate Audio',
-                        value: 'generate',
-                        action: 'Generate audio',
-                        description: 'Text-to-speech (TTS)',
-                    },
-                    {
-                        name: 'Transcribe A Recording',
-                        value: 'transcribe',
-                        action: 'Transcribe a recording',
-                        description: 'Speech-to-text (STT)',
-                    },
-                    {
-                        name: 'Generate An Image',
-                        value: 'generateImage',
-                        action: 'Generate an image',
-                        description: 'YandexART text-to-image (Foundation Models)',
-                    },
-                ],
-                default: 'transcribe',
-            },
+            ...audioOperations,
+            ...imageOperations,
             {
                 displayName: 'Binary Property',
                 name: 'binaryPropertyName',

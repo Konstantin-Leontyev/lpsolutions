@@ -48,7 +48,7 @@ class YandexGpt {
         const items = this.getInputData();
         const credentials = (await this.getCredentials('yandexGptApi'));
         const resource = this.getNodeParameter('resource', 0, 'audio');
-        const operation = this.getNodeParameter('operation', 0, 'transcribe');
+        const operation = this.getNodeParameter('operation', 0, 'generate');
         if (resource === 'image') {
             if (operation !== 'generateImage') {
                 throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'For Resource "Image", select operation "Generate an image".');

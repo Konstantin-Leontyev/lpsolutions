@@ -8,6 +8,8 @@
 
 Правило ESLint `@n8n/community-nodes/icon-validation` требует, чтобы поле `description` в классе ноды было **литералом объекта** в AST; при вынесении описания в `lib/yandexGptDescription.ts` для этого файла включено точечное отключение правила (см. комментарий в `YandexGpt.node.ts`).
 
+Структура **Resource / Operation** повторяет ноду **OpenAI** в `n8n-nodes-base`: для каждого значения `resource` задаётся **отдельное** свойство с `name: 'operation'` и `displayOptions.show.resource` на уровне **свойства** (не на отдельных опциях). Так n8n строит список действий в каталоге и корректно резолвит `action` (см. `resolveResourceAndOperation` в `n8n-workflow`).
+
 | Путь | Назначение |
 |------|------------|
 | `nodes/YandexGpt/YandexGpt.node.ts` | Класс ноды: `execute`, `loadOptions` |

@@ -1,8 +1,61 @@
-import type { INodeTypeDescription } from 'n8n-workflow';
+import type { INodeTypeDescription, INodeProperties } from 'n8n-workflow';
 import { NodeConnectionTypes } from 'n8n-workflow';
 
 import { ASPECT_RATIO_PRESETS } from './imageAspect';
 import { LOCALE_OPTIONS, VOICES_WITHOUT_ROLES } from './speechkitVoices';
+
+/** Как в OpenAI: отдельное поле `operation` на каждый resource (displayOptions на свойстве, не на опциях). */
+const audioOperations: INodeProperties[] = [
+	{
+		displayName: 'Operation',
+		name: 'operation',
+		type: 'options',
+		noDataExpression: true,
+		displayOptions: {
+			show: {
+				resource: ['audio'],
+			},
+		},
+		options: [
+			{
+				name: 'Generate Audio',
+				value: 'generate',
+				action: 'Generate audio',
+				description: 'Text-to-speech (TTS)',
+			},
+			{
+				name: 'Transcribe A Recording',
+				value: 'transcribe',
+				action: 'Transcribe a recording',
+				description: 'Speech-to-text (STT)',
+			},
+		],
+		default: 'generate',
+	},
+];
+
+const imageOperations: INodeProperties[] = [
+	{
+		displayName: 'Operation',
+		name: 'operation',
+		type: 'options',
+		noDataExpression: true,
+		displayOptions: {
+			show: {
+				resource: ['image'],
+			},
+		},
+		options: [
+			{
+				name: 'Generate An Image',
+				value: 'generateImage',
+				action: 'Generate an image',
+				description: 'YandexART text-to-image (Foundation Models)',
+			},
+		],
+		default: 'generateImage',
+	},
+];
 
 export function buildYandexGptDescription(): INodeTypeDescription {
 	return {
@@ -38,33 +91,8 @@ export function buildYandexGptDescription(): INodeTypeDescription {
 				],
 				default: 'audio',
 			},
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				options: [
-					{
-						name: 'Generate Audio',
-						value: 'generate',
-						action: 'Generate audio',
-						description: 'Text-to-speech (TTS)',
-					},
-					{
-						name: 'Transcribe A Recording',
-						value: 'transcribe',
-						action: 'Transcribe a recording',
-						description: 'Speech-to-text (STT)',
-					},
-					{
-						name: 'Generate An Image',
-						value: 'generateImage',
-						action: 'Generate an image',
-						description: 'YandexART text-to-image (Foundation Models)',
-					},
-				],
-				default: 'transcribe',
-			},
+			...audioOperations,
+			...imageOperations,
 			{
 				displayName: 'Binary Property',
 				name: 'binaryPropertyName',

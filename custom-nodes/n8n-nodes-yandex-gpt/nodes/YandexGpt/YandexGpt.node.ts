@@ -65,7 +65,7 @@ export class YandexGpt implements INodeType {
 		const items = this.getInputData();
 		const credentials = (await this.getCredentials('yandexGptApi')) as YandexCredentials;
 		const resource = this.getNodeParameter('resource', 0, 'audio') as string;
-		const operation = this.getNodeParameter('operation', 0, 'transcribe') as string;
+		const operation = this.getNodeParameter('operation', 0, 'generate') as string;
 
 		if (resource === 'image') {
 			if (operation !== 'generateImage') {
