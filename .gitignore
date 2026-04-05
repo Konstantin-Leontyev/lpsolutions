@@ -17,6 +17,9 @@ backups/
 traefik_data/
 data/
 
+# Node.js dependencies (локальная сборка community-нод)
+**/node_modules/
+
 # Служебные файлы операционной системы и редакторов
 .DS_Store
 Thumbs.db

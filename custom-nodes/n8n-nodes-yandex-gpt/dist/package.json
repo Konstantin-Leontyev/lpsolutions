@@ -1,7 +1,7 @@
 {
     "name": "n8n-nodes-yandex-gpt",
     "version": "0.1.0",
-    "description": "n8n nodes for Yandex GPT (SpeechKit STT and TTS)",
+    "description": "n8n nodes for Yandex Cloud: SpeechKit STT/TTS and YandexART image generation (Foundation Models)",
     "license": "MIT",
     "homepage": "",
     "keywords": [
@@ -39,7 +39,9 @@
     },
     "devDependencies": {
         "@n8n/node-cli": "*",
+        "@types/node": "^22.10.0",
         "eslint": "9.32.0",
+        "n8n-workflow": "*",
         "prettier": "3.6.2",
         "release-it": "^19.0.4",
         "typescript": "5.9.2"

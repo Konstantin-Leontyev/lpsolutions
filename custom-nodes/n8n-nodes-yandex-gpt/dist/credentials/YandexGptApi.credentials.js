@@ -22,7 +22,7 @@ class YandexGptApi {
                 type: 'string',
                 typeOptions: { password: true },
                 default: '',
-                description: 'API key of the service account with access to Yandex Cloud APIs used by this node (e.g. SpeechKit)',
+                description: 'API key for a service account that can call the APIs used by this node (SpeechKit TTS/STT and/or Foundation Models image generation — see package README)',
                 required: true,
             },
         ];

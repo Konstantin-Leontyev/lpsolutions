@@ -1,4 +1,4 @@
-import type { ICredentialTestRequest, ICredentialType, Icon, INodeProperties } from 'n8n-workflow';
+import type { ICredentialType, ICredentialTestRequest, INodeProperties, Icon } from 'n8n-workflow';
 export declare class YandexGptApi implements ICredentialType {
     name: string;
     displayName: string;

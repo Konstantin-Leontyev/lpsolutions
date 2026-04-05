@@ -7,6 +7,9 @@
         "credentialDocumentation": [
             {
                 "url": "https://yandex.cloud/docs/speechkit"
+            },
+            {
+                "url": "https://yandex.cloud/docs/foundation-models/"
             }
         ],
         "primaryDocumentation": [
@@ -15,6 +18,18 @@
             },
             {
                 "url": "https://yandex.cloud/docs/speechkit/concepts/tts"
+            },
+            {
+                "url": "https://yandex.cloud/en/docs/ai-studio/image-generation/api-ref/ImageGenerationAsync/generate"
+            },
+            {
+                "url": "https://yandex.cloud/ru/docs/ai-studio/image-generation/api-ref/ImageGenerationAsync/generate"
+            },
+            {
+                "url": "https://yandex.cloud/en/docs/foundation-models/concepts/yandexart/models"
+            },
+            {
+                "url": "https://yandex.cloud/ru/docs/foundation-models/concepts/yandexart/models"
             }
         ]
     }
