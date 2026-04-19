@@ -66,6 +66,14 @@ docker compose up -d
    - **Base URL**: `http://ollama:11434`
    - **Model**: <название_модели>
 
+###  Обновление n8n
+
+```bash
+cd /opt/lpsolutions
+docker compose pull n8n
+docker compose up -d n8n
+```   
+
 ### Кастомная нода Yandex GPT
 
 Сборка ноды лежит в репо: `custom-nodes/n8n-nodes-yandex-gpt/` (package.json + dist). Том в docker-compose монтирует `./custom-nodes` в контейнер. Поддерживаются **аудио** (SpeechKit TTS/STT) и **изображения** (YandexART / Foundation Models). Список официальных ссылок на документацию Яндекса и сопоставление опций с OpenAI — в [custom-nodes/n8n-nodes-yandex-gpt/README.md](custom-nodes/n8n-nodes-yandex-gpt/README.md).
