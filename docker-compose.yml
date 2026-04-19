@@ -47,6 +47,25 @@ services:
       timeout: 5s
       retries: 3
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"  # REST API (для n8n)
+      - "6334:6334"  # gRPC (для будущих проектов)
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-}
+    networks:
+      - internal_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   traefik:
     image: traefik:latest
     container_name: traefik
@@ -254,3 +273,4 @@ volumes:
   redis_data:
   traefik_data:
   n8n_data:
+  qdrant_data:
